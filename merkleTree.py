@@ -56,11 +56,11 @@ class MerkleTree(object):
         for i in range(0, len(key)):    
             if key[i] == '0':
                 if currentNode.left is None:
-                    currentNode.left = Node(None,None,key[i],None)
+                    currentNode.left = Node(None,None,None,None)
                 currentNode = currentNode.left
             elif key[i] == '1':
                 if currentNode.right is None:
-                    currentNode.right = Node(None,None,key[i],None)
+                    currentNode.right = Node(None,None,None,None)
                 currentNode = currentNode.right
                 
             if i == len(key) - 1:
@@ -88,24 +88,18 @@ class MerkleTree(object):
                 
             hashLeft = b''
             hashRight = b''
-            k = b''
-            v = b''
             
             if (currentNode.left is not None):
                 hashLeft = currentNode.left.get_hash()
             if (currentNode.right is not None):
                 hashRight = currentNode.right.get_hash()
-            if currentNode.key is not None:
-                k = currentNode.key.encode('utf-8')
-            if currentNode.value is not None:
-                v = currentNode.value.to_bytes(32, byteorder='big')
                 
             if key[i] == '0':
                 currentNode = currentNode.left
-                proofs.append([b'',hashRight,k,v])
+                proofs.append([False ,hashRight])
             else :
                 currentNode = currentNode.right
-                proofs.append([hashLeft,b'',k,v])
+                proofs.append([True,hashLeft])
             
         return proofs[::-1]
     
@@ -118,17 +112,13 @@ def verify(root, key, value, proof):
     k = key.encode('utf-8')
     v = value.to_bytes(32, byteorder='big')
     
-    rKey = key[::-1]
-    rKey = rKey[1:]+rKey[:1]
-
-    
     h = sha256(b'' + b'' + k + v).digest()
     
     for i in range(0,len(proofs)):
-        if rKey[i] == '0':
-            h = sha256(h + proofs[i][1] + proofs[i][2] + proofs[i][3]).digest()
-        elif rKey[i] == '1':
-            h = sha256(proofs[i][0] + h + proofs[i][2] + proofs[i][3]).digest()
+        if proofs[i][0]:
+            h = sha256(proofs[i][1] + h).digest()
+        else:
+            h = sha256(h + proofs[i][1]).digest()
             
     print (h.hex())
     print (h.hex() == root)
@@ -146,11 +136,11 @@ if __name__ == '__main__':
     m.print_tree_bf()
     print(m.get_root().hex())
     
-    key = '0000'
-    value = 10
+    key = '0111'
+    value = 40
     
     proofs = m.get_proof(key)
     for i in range(len(proofs)):
         print (proofs[i])
-    
-    verify(m.get_root(), key, value, proofs)
+        
+    verify(m.get_root().hex(), key, value, proofs)
