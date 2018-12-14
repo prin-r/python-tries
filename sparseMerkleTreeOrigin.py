@@ -1,80 +1,80 @@
 from hashlib import sha256
 
-def get_hash(left, right):
+def getHash(left, right):
     if left is 0 and right is 0:
         return 0
     return int(sha256(left.to_bytes(32, byteorder='big')+right.to_bytes(32, byteorder='big')).hexdigest(), 16)
 
 class Smt(object):
     def __init__(self):
-        self.hash_map = {
+        self.mapping = {
             0: (0,0)
         }
-        self.root_hash = 0
+        self.root = 0
 
     def insert(self, key, value):
-        self.root_hash = self._insert(self.root_hash, key, value)
+        self.root = self._insert(self.root, key, value)
     
-    def _insert(self, current_hash, key, value):
+    def _insert(self, currentHash, key, value):
         if len(key) <= 0:
             return value
         else :
-            left_hash, right_hash = self.hash_map[current_hash]
+            left, right = self.mapping[currentHash]
             if key[0] is '0':
-                left_hash = self._insert(left_hash, key[1:], value)
+                left = self._insert(left, key[1:], value)
             else :
-                right_hash = self._insert(right_hash, key[1:], value)
+                right = self._insert(right, key[1:], value)
             
-            if current_hash != 0 and current_hash in self.hash_map:
-                del self.hash_map[current_hash]
-            new_hash = get_hash(left_hash,right_hash)
-            self.hash_map[new_hash] = (left_hash,right_hash)
-            return new_hash
+            if currentHash != 0 and currentHash in self.mapping:
+                del self.mapping[currentHash]
+            newHash = getHash(left,right)
+            self.mapping[newHash] = (left,right)
+            return newHash
 
-    def get_proof(self, key):
-        current_hash = self.root_hash
+    def getProof(self, key):
+        currentHash = self.root
         proofs = []
         for k in key:
-            left , right = self.hash_map[current_hash]
+            left , right = self.mapping[currentHash]
             if k is '0':
-                current_hash = left
-                proofs.append(right)
+                currentHash = left
+                proofs += [right]
             else :
-                current_hash = right
-                proofs.append(left)
+                currentHash = right
+                proofs += [left]
         return proofs
 
     def printTree(self, depth):
-        queue = [self.root_hash]
+        queue = [self.root]
         n = len(queue)
         while n > 0 and depth >= 0:
             for i in range(0,n,1):
                 print (queue[i])
-                if queue[i] in self.hash_map:
-                    left , right = self.hash_map[queue[i]]
-                    queue.append(left)
-                    queue.append(right)
+                if queue[i] in self.mapping:
+                    left , right = self.mapping[queue[i]]
+                    queue += [left]
+                    queue += [right]
             queue = queue[n:]
             n = len(queue)
             depth -= 1
             print ("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
 
 def printAllKeyValue(smt):
-    for k, v in smt.hash_map.items():
+    for k, v in smt.mapping.items():
         print (k)
         print (v)
         print ("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
     print("..............")
 
-def verify(proofs, root_hash, key, value):
-    current_hash = value
+def verify(proofs, root, key, value):
+    currentHash = value
     for i in range(len(key) - 1,-1,-1):
         if key[i] is '0':
-            current_hash = get_hash(current_hash, proofs[i])
+            currentHash = getHash(currentHash, proofs[i])
         else :
-            current_hash = get_hash(proofs[i], current_hash)
+            currentHash = getHash(proofs[i], currentHash)
 
-    return current_hash == root_hash
+    return currentHash == root
 
 if __name__ == "__main__":
     smt = Smt()
@@ -82,14 +82,14 @@ if __name__ == "__main__":
     smt.insert('0000',100)
     smt.insert('1100',1100)
 
-    key = '0000'
-    val = 100
+    key = '1100'
+    val = 1100
 
     smt.printTree(4)
 
-    proofs = smt.get_proof(key)
+    proofs = smt.getProof(key)
 
-    print (verify(proofs, smt.root_hash, key, val))
+    print (verify(proofs, smt.root, key, val))
 
     print (proofs)
                 
